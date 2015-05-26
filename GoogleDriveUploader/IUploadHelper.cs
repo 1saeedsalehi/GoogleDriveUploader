@@ -14,5 +14,6 @@ namespace GoogleDriveUploader
         Google.Apis.Drive.v2.Data.File UpdateFile(string uploadFile, string fileId);
         Google.Apis.Drive.v2.Data.File UpdateFile(string uploadFile, string fileId, string description = "File updated by DriveUploader for Windows", byte[] byteArray = null);
         Google.Apis.Drive.v2.Data.File UploadFile(string uploadFile, string description = "File uploaded by DriveUploader For Windows");
+        void ConnectToGoogleDriveServiceAsyn();
     }
 }

@@ -14,8 +14,11 @@ namespace GoogleDriveUploader
 {
     public class UploadHelper : IUploadHelper
     {
+
         private string DirectoryId { set; get; }
+
         private DriveService Service { set; get; }
+
         protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private String folder;
         private String clientId;
@@ -39,49 +42,67 @@ namespace GoogleDriveUploader
         private void ConnectToGoogleDriveService(string folder, string clientId, string clientSecret, string applicationName,
                                                      string folderName)
         {
-            var scopes = new[]
+
+            try
+            {
+
+
+                var scopes = new[]
                 {
                     DriveService.Scope.Drive,
                     DriveService.Scope.DriveFile
                 };
 
-            var dataStore = new FileDataStore(folder);
+                var dataStore = new FileDataStore(folder);
 
-            var secrets = new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret };
+                var secrets = new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret };
 
-            var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(secrets,
-                                                                         scopes,
-                                                                         "user",
-                                                                         CancellationToken.None,
-                                                                         dataStore).Result;
+                var authorized = GoogleWebAuthorizationBroker.AuthorizeAsync(secrets,
+                                                                             scopes,
+                                                                             "user",
+                                                                             CancellationToken.None,
+                                                                             dataStore);
+                
+             
+              var credential =  authorized.Result;
 
-            var service = new DriveService(new BaseClientService.Initializer()
+                var service = new DriveService(new BaseClientService.Initializer()
+                    {
+                        HttpClientInitializer = credential,
+                        ApplicationName = applicationName,
+                    });
+                Service = service;
+
+              
+
+                var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", folderName);
+
+                var files = FileHelper.GetFiles(service, query);
+                Logger.Trace("Files Count:" + files);
+                // If there isn't a directory with this name lets create one.
+                if (files.Count == 0)
                 {
-                    HttpClientInitializer = credential,
-                    ApplicationName = applicationName,
-                });
-            this.Service = service;
+                    files.Add(this.CreateDirectory(folderName));
+                    Logger.Trace("If there isn't a directory with this name, lets create " + folderName);
+                }
 
-            var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", folderName);
+                if (files.Count != 0)
+                {
+                    string directoryId = files[0].Id;
+                    this.DirectoryId = directoryId;
+                    Logger.Trace("DirectoryId :"+this.DirectoryId);
 
-            var files = FileHelper.GetFiles(service, query);
+                    // File newFile = UploadHelper.UploadFile(service, @"c:\temp\Lighthouse.jpg", directoryId);
 
-            // If there isn't a directory with this name lets create one.
-            if (files.Count == 0)
+                    // File updatedFile = UploadHelper.UpdateFile(service, @"c:\temp\Lighthouse.jpg", directoryId, newFile.Id);
+                }
+
+            }
+            catch (Exception ex)
             {
-                files.Add(this.CreateDirectory(folderName));
+                Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} client secret: {1} ", clientId, clientSecret) + ex.StackTrace, ex);
             }
 
-            if (files.Count != 0)
-            {
-                string directoryId = files[0].Id;
-                this.DirectoryId = directoryId;
-
-
-                // File newFile = UploadHelper.UploadFile(service, @"c:\temp\Lighthouse.jpg", directoryId);
-
-                // File updatedFile = UploadHelper.UpdateFile(service, @"c:\temp\Lighthouse.jpg", directoryId, newFile.Id);
-            }
         }
 
         /// <summary>
@@ -424,6 +445,7 @@ namespace GoogleDriveUploader
             byte[] byteArray = null)
         {
 
+
             var body = new File
             {
                 Title = System.IO.Path.GetFileName(uploadFile),
@@ -442,13 +464,14 @@ namespace GoogleDriveUploader
             var stream = new System.IO.MemoryStream(byteArray);
             try
             {
+                
                 FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                 request.Upload();
                 return request.ResponseBody;
             }
             catch (Exception e)
             {
-                Logger.Error("An error occurred: " + e.Message, e);
+                Logger.Error("Service.Files.Insert error occurred: " + e.StackTrace, e);
                 return null;
             }
 
