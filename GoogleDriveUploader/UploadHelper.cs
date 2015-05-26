@@ -8,7 +8,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using NLog;
-
+using System.Security.Cryptography.X509Certificates;
 
 namespace GoogleDriveUploader
 {
@@ -20,64 +20,76 @@ namespace GoogleDriveUploader
         private DriveService Service { set; get; }
 
         protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private String folder;
-        private String clientId;
-        private String clientSecret;
-        private String applicationName;
-        private String folderName;
 
-        public UploadHelper(String folder, String clientId, String clientSecret, String applicationName, String folderName)
+        private String clientId { set; get; }
+        private String userEmail { set; get; }
+        private String folderName { set; get; }
+        private String serviceAccountEmail { set; get; }
+        private String serviceAccountPkCs12FilePath { set; get; }
+      //  private const string SERVICE_ACCOUNT_EMAIL = "660481316212-aietulh54ei2eqsi1gdvl0g7s12ohf70@developer.gserviceaccount.com";
+       // private const string SERVICE_ACCOUNT_PKCS12_FILE_PATH = @"C:\Users\Yuce\Documents\GitHub\StoreManagement\StoreManagement\StoreManagement.Admin\Content\Google Drive File Upload-1cecdf432860.p12";
+
+
+        public UploadHelper(
+            String clientId,
+            String userEmail,
+            String serviceAccountEmail,
+            String serviceAccountPkCs12FilePath,
+            String folderName)
         {
-            this.folder = folder;
             this.clientId = clientId;
-            this.clientSecret = clientSecret;
-            this.applicationName = applicationName;
+            this.userEmail = userEmail;
             this.folderName = folderName;
+            this.serviceAccountEmail = serviceAccountEmail;
+            this.serviceAccountPkCs12FilePath = serviceAccountPkCs12FilePath;
             ConnectToGoogleDriveServiceAsyn();
         }
         public void ConnectToGoogleDriveServiceAsyn()
         {
-            Task.Factory.StartNew(() => { ConnectToGoogleDriveService(folder, clientId, clientSecret, applicationName, folderName); });
+            Task.Factory.StartNew(() => { ConnectToGoogleDriveService(userEmail, folderName); });
         }
-        private void ConnectToGoogleDriveService(string folder, string clientId, string clientSecret, string applicationName,
-                                                     string folderName)
+        /// <summary>
+        /// Build a Drive service object authorized with the service account
+        /// that acts on behalf of the given user.
+        /// </summary>
+        /// @param userEmail The email of the user.
+        /// <returns>Drive service object.</returns>
+        public DriveService BuildService(String userEmail)
         {
 
-            try
-            {
-
-
-                var scopes = new[]
+            var scopes = new[]
                 {
                     DriveService.Scope.Drive,
                     DriveService.Scope.DriveFile
                 };
+            X509Certificate2 certificate = new X509Certificate2(serviceAccountPkCs12FilePath,
+                "notasecret", X509KeyStorageFlags.Exportable);
+            ServiceAccountCredential credential = new ServiceAccountCredential(
+                new ServiceAccountCredential.Initializer(serviceAccountEmail)
+                {
+                    Scopes = scopes,
+                    User = userEmail
+                }.FromCertificate(certificate));
 
-                var dataStore = new FileDataStore(folder);
+            // Create the service.
+            var service = new DriveService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "Drive API Service Account Sample",
+            });
 
-                var secrets = new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret };
+            return service;
+        }
+        private void ConnectToGoogleDriveService(String userEmail,string folderName)
+        {
 
-                var authorized = GoogleWebAuthorizationBroker.AuthorizeAsync(secrets,
-                                                                             scopes,
-                                                                             "user",
-                                                                             CancellationToken.None,
-                                                                             dataStore);
-                
-             
-              var credential =  authorized.Result;
-
-                var service = new DriveService(new BaseClientService.Initializer()
-                    {
-                        HttpClientInitializer = credential,
-                        ApplicationName = applicationName,
-                    });
-                Service = service;
-
-              
+            try
+            {
+                Service = BuildService(userEmail);
 
                 var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", folderName);
 
-                var files = FileHelper.GetFiles(service, query);
+                var files = FileHelper.GetFiles(Service, query);
                 Logger.Trace("Files Count:" + files);
                 // If there isn't a directory with this name lets create one.
                 if (files.Count == 0)
@@ -100,7 +112,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception ex)
             {
-                Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} client secret: {1} ", clientId, clientSecret) + ex.StackTrace, ex);
+                Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} ", clientId) + ex.StackTrace, ex);
             }
 
         }
