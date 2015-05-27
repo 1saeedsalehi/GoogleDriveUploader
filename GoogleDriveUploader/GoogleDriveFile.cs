@@ -16,8 +16,8 @@ namespace GoogleDriveUploader
         public string ThumbnailLink { get; set; }
         public string IconLink { get; set; }
         public string WebContentLink { get; set; }
-        public DateTime CreatedDate { get; set; }
-        public DateTime ModifiedDate { get; set; }
+        public DateTime ? CreatedDate { get; set; }
+        public DateTime ? ModifiedDate { get; set; }
     }
 
 

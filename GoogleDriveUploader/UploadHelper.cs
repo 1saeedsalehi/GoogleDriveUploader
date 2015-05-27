@@ -128,7 +128,7 @@ namespace GoogleDriveUploader
         /// <param name="newFilename">Filename of the new content to upload.</param>
         /// <param name="newRevision">Whether or not to create a new revision for this file.</param>
         /// <returns>Updated file metadata, null is returned if an API error occurred.</returns>
-        public File updateFile(String fileId, String newTitle,
+        public GoogleDriveFile updateFile(String fileId, String newTitle,
             String newDescription, String newMimeType, String newFilename, bool newRevision)
         {
             try
@@ -150,7 +150,9 @@ namespace GoogleDriveUploader
                 request.Upload();
 
                 File updatedFile = request.ResponseBody;
-                return updatedFile;
+
+
+                return ConvertFileToGoogleDriveFile(updatedFile);
             }
             catch (Exception e)
             {
@@ -158,6 +160,22 @@ namespace GoogleDriveUploader
                 return null;
             }
         }
+
+        private GoogleDriveFile ConvertFileToGoogleDriveFile(File file)
+        {
+            var gdf = new GoogleDriveFile();
+            gdf.Id = file.Id;
+            gdf.ThumbnailLink = file.ThumbnailLink;
+            gdf.ModifiedDate = file.ModifiedDate;
+            gdf.OriginalFilename = file.OriginalFilename;
+            gdf.Title = file.Title;
+            gdf.IconLink = file.IconLink;
+            gdf.CreatedDate = file.CreatedDate;
+            gdf.WebContentLink = file.WebContentLink;
+
+            return gdf;
+        }
+
         /**
          * Permanently delete a file, skipping the trash.
          *
@@ -182,7 +200,7 @@ namespace GoogleDriveUploader
         /// </summary>
         /// <param name="service">Drive API service instance.</param>
         /// <returns>List of File resources.</returns>
-        public List<File> retrieveAllFiles()
+        public List<GoogleDriveFile> retrieveAllFiles()
         {
             List<File> result = new List<File>();
             FilesResource.ListRequest request = Service.Files.List();
@@ -202,7 +220,13 @@ namespace GoogleDriveUploader
                     request.PageToken = null;
                 }
             } while (!String.IsNullOrEmpty(request.PageToken));
-            return result;
+            List<GoogleDriveFile> result2 = new List<GoogleDriveFile>();
+            foreach (var file in result)
+            {
+                result2.Add(ConvertFileToGoogleDriveFile(file));
+            }
+
+            return result2;
         }
 
         /// <summary>
@@ -211,11 +235,11 @@ namespace GoogleDriveUploader
         /// <param name="service">Drive API service instance.</param>
         /// <param name="fileId">ID of the file to trash.</param>
         /// <returns>The updated file, null is returned if an API error occurred</returns>
-        public File TrashFile(String fileId)
+        public GoogleDriveFile TrashFile(String fileId)
         {
             try
             {
-                return Service.Files.Trash(fileId).Execute();
+                return ConvertFileToGoogleDriveFile(Service.Files.Trash(fileId).Execute());
             }
             catch (Exception e)
             {
@@ -233,7 +257,7 @@ namespace GoogleDriveUploader
         /// <param name="parentId">Parent folder's ID.</param>
         /// <param name="mimeType">MIME type of the file to insert.</param>
         /// <param name="filename">Filename of the file to insert.</param><br>  /// <returns>Inserted file metadata, null is returned if an API error occurred.</returns>
-        public File insertFile(String title, String description, String mimeType, String filename)
+        public GoogleDriveFile insertFile(String title, String description, String mimeType, String filename)
         {
             // File's metadata.
             File body = new File();
@@ -260,7 +284,8 @@ namespace GoogleDriveUploader
                 // Uncomment the following line to print the File ID.
                 // Console.WriteLine("File ID: " + file.Id);
 
-                return file;
+              
+                return ConvertFileToGoogleDriveFile(file);
             }
             catch (Exception e)
             {
@@ -271,7 +296,7 @@ namespace GoogleDriveUploader
 
 
 
-        public File UpdateFile(string uploadFile, string fileId)
+        public GoogleDriveFile UpdateFile(string uploadFile, string fileId)
         {
 
             if (System.IO.File.Exists(uploadFile))
@@ -297,7 +322,8 @@ namespace GoogleDriveUploader
                 {
                     FilesResource.UpdateMediaUpload request = Service.Files.Update(body, fileId, stream, GetMimeType(uploadFile));
                     request.Upload();
-                    return request.ResponseBody;
+                    var file =  request.ResponseBody;
+                    return ConvertFileToGoogleDriveFile(file);
                 }
                 catch (Exception e)
                 {
@@ -313,7 +339,7 @@ namespace GoogleDriveUploader
 
         }
 
-        public File UpdateFile(
+        public GoogleDriveFile UpdateFile(
             string uploadFile,
             string fileId,
             String description = "File updated by DriveUploader for Windows",
@@ -343,7 +369,8 @@ namespace GoogleDriveUploader
                 {
                     FilesResource.UpdateMediaUpload request = Service.Files.Update(body, fileId, stream, GetMimeType(uploadFile));
                     request.Upload();
-                    return request.ResponseBody;
+                    var file = request.ResponseBody;
+                    return ConvertFileToGoogleDriveFile(file);
                 }
                 catch (Exception e)
                 {
@@ -358,7 +385,7 @@ namespace GoogleDriveUploader
             }
 
         }
-        public File CreateDirectory(String directoryTitle, String directoryDescription = "Backup of files")
+        private File CreateDirectory(String directoryTitle, String directoryDescription = "Backup of files")
         {
 
             File newDirectory = null;
@@ -385,7 +412,6 @@ namespace GoogleDriveUploader
             {
                 Logger.Error("An error occurred: " + e.Message, e);
             }
-
             return newDirectory;
         }
 
@@ -410,7 +436,7 @@ namespace GoogleDriveUploader
             return mimeType;
         }
 
-        public File UploadFile(
+        public GoogleDriveFile UploadFile(
             string uploadFile,
             String description = "File uploaded by DriveUploader For Windows")
         {
@@ -436,7 +462,8 @@ namespace GoogleDriveUploader
                 {
                     FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                     request.Upload();
-                    return request.ResponseBody;
+                    var file = request.ResponseBody;
+                    return ConvertFileToGoogleDriveFile(file);
                 }
                 catch (Exception e)
                 {
@@ -451,7 +478,7 @@ namespace GoogleDriveUploader
             }
 
         }
-        public File InsertFile(
+        public GoogleDriveFile InsertFile(
             string uploadFile,
             String description = "File uploaded by DriveUploader For Windows",
             byte[] byteArray = null)
@@ -479,7 +506,8 @@ namespace GoogleDriveUploader
                 
                 FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                 request.Upload();
-                return request.ResponseBody;
+                var file = request.ResponseBody;
+                return ConvertFileToGoogleDriveFile(file);
             }
             catch (Exception e)
             {
