@@ -15,6 +15,7 @@ namespace GoogleDriveUploader
     public class UploadHelper : IUploadHelper
     {
 
+        public String Password { set; get; }
         private string DirectoryId { set; get; }
 
         private DriveService Service { set; get; }
@@ -25,29 +26,33 @@ namespace GoogleDriveUploader
         private String userEmail { set; get; }
         private String folderName { set; get; }
         private String serviceAccountEmail { set; get; }
-        private String serviceAccountPkCs12FilePath { set; get; }
-      //  private const string SERVICE_ACCOUNT_EMAIL = "660481316212-aietulh54ei2eqsi1gdvl0g7s12ohf70@developer.gserviceaccount.com";
-       // private const string SERVICE_ACCOUNT_PKCS12_FILE_PATH = @"C:\Users\Yuce\Documents\GitHub\StoreManagement\StoreManagement\StoreManagement.Admin\Content\Google Drive File Upload-1cecdf432860.p12";
+        private X509Certificate2 Certificate { set; get; }
+        //  private const string SERVICE_ACCOUNT_EMAIL = "660481316212-aietulh54ei2eqsi1gdvl0g7s12ohf70@developer.gserviceaccount.com";
+        // private const string SERVICE_ACCOUNT_PKCS12_FILE_PATH = @"C:\Users\Yuce\Documents\GitHub\StoreManagement\StoreManagement\StoreManagement.Admin\Content\Google Drive File Upload-1cecdf432860.p12";
 
 
         public UploadHelper(
             String clientId,
             String userEmail,
             String serviceAccountEmail,
-            String serviceAccountPkCs12FilePath,
-            String folderName)
+           X509Certificate2 certificate,
+            String folderName,
+            String password)
         {
             this.clientId = clientId;
             this.userEmail = userEmail;
             this.folderName = folderName;
             this.serviceAccountEmail = serviceAccountEmail;
-            this.serviceAccountPkCs12FilePath = serviceAccountPkCs12FilePath;
+            this.Certificate = certificate;
+            this.Password = password;
             ConnectToGoogleDriveServiceAsyn();
         }
         public void ConnectToGoogleDriveServiceAsyn()
         {
             Task.Factory.StartNew(() => { ConnectToGoogleDriveService(userEmail, folderName); });
         }
+
+
         /// <summary>
         /// Build a Drive service object authorized with the service account
         /// that acts on behalf of the given user.
@@ -62,14 +67,14 @@ namespace GoogleDriveUploader
                     DriveService.Scope.Drive,
                     DriveService.Scope.DriveFile
                 };
-            X509Certificate2 certificate = new X509Certificate2(serviceAccountPkCs12FilePath,
-                "notasecret", X509KeyStorageFlags.Exportable);
+            //X509Certificate2 certificate = new X509Certificate2(privateKeyRawData,
+            //    Password, X509KeyStorageFlags.Exportable);
             ServiceAccountCredential credential = new ServiceAccountCredential(
                 new ServiceAccountCredential.Initializer(serviceAccountEmail)
                 {
                     Scopes = scopes,
                     User = userEmail
-                }.FromCertificate(certificate));
+                }.FromCertificate(Certificate));
 
             // Create the service.
             var service = new DriveService(new BaseClientService.Initializer()
@@ -80,7 +85,7 @@ namespace GoogleDriveUploader
 
             return service;
         }
-        private void ConnectToGoogleDriveService(String userEmail,string folderName)
+        private void ConnectToGoogleDriveService(String userEmail, string folderName)
         {
 
             try
@@ -102,7 +107,7 @@ namespace GoogleDriveUploader
                 {
                     string directoryId = files[0].Id;
                     this.DirectoryId = directoryId;
-                    Logger.Trace("DirectoryId :"+this.DirectoryId);
+                    Logger.Trace("DirectoryId :" + this.DirectoryId);
 
                     // File newFile = UploadHelper.UploadFile(service, @"c:\temp\Lighthouse.jpg", directoryId);
 
@@ -284,7 +289,7 @@ namespace GoogleDriveUploader
                 // Uncomment the following line to print the File ID.
                 // Console.WriteLine("File ID: " + file.Id);
 
-              
+
                 return ConvertFileToGoogleDriveFile(file);
             }
             catch (Exception e)
@@ -322,7 +327,7 @@ namespace GoogleDriveUploader
                 {
                     FilesResource.UpdateMediaUpload request = Service.Files.Update(body, fileId, stream, GetMimeType(uploadFile));
                     request.Upload();
-                    var file =  request.ResponseBody;
+                    var file = request.ResponseBody;
                     return ConvertFileToGoogleDriveFile(file);
                 }
                 catch (Exception e)
@@ -503,7 +508,7 @@ namespace GoogleDriveUploader
             var stream = new System.IO.MemoryStream(byteArray);
             try
             {
-                
+
                 FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                 request.Upload();
                 var file = request.ResponseBody;
