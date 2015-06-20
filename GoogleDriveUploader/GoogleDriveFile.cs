@@ -18,6 +18,8 @@ namespace GoogleDriveUploader
         public string WebContentLink { get; set; }
         public DateTime ? CreatedDate { get; set; }
         public DateTime ? ModifiedDate { get; set; }
+        public int? Height { get; set; }
+        public int? Width { get; set; }
     }
 
 

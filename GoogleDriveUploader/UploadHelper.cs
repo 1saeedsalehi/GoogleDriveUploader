@@ -49,7 +49,7 @@ namespace GoogleDriveUploader
         }
         public void ConnectToGoogleDriveServiceAsyn()
         {
-            Task.Factory.StartNew(() => { ConnectToGoogleDriveService(userEmail, folderName); });
+                       ConnectToGoogleDriveService(userEmail, folderName);
         }
 
 
@@ -177,6 +177,9 @@ namespace GoogleDriveUploader
             gdf.IconLink = file.IconLink;
             gdf.CreatedDate = file.CreatedDate;
             gdf.WebContentLink = file.WebContentLink;
+            gdf.Height =  file.ImageMediaMetadata.Height;
+            gdf.Width = file.ImageMediaMetadata.Width;
+
 
             return gdf;
         }
@@ -465,6 +468,9 @@ namespace GoogleDriveUploader
                 var stream = new System.IO.MemoryStream(byteArray);
                 try
                 {
+                    //body.UserPermission.WithLink = true;
+                    //body.UserPermission.Type = "anyone";
+                   
                     FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                     request.Upload();
                     var file = request.ResponseBody;
