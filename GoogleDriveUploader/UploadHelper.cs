@@ -16,7 +16,6 @@ namespace GoogleDriveUploader
     {
 
         public String Password { set; get; }
-        private string DirectoryId { set; get; }
 
         private DriveService Service { set; get; }
 
@@ -92,34 +91,47 @@ namespace GoogleDriveUploader
             {
                 Service = BuildService(userEmail);
 
-                var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", folderName);
-
-                var files = FileHelper.GetFiles(Service, query);
-                Logger.Trace("Files Count:" + files);
-                // If there isn't a directory with this name lets create one.
-                if (files.Count == 0)
-                {
-                    files.Add(this.CreateDirectory(folderName));
-                    Logger.Trace("If there isn't a directory with this name, lets create " + folderName);
-                }
-
-                if (files.Count != 0)
-                {
-                    string directoryId = files[0].Id;
-                    this.DirectoryId = directoryId;
-                    Logger.Trace("DirectoryId :" + this.DirectoryId);
-
-                    // File newFile = UploadHelper.UploadFile(service, @"c:\temp\Lighthouse.jpg", directoryId);
-
-                    // File updatedFile = UploadHelper.UpdateFile(service, @"c:\temp\Lighthouse.jpg", directoryId, newFile.Id);
-                }
-
             }
             catch (Exception ex)
             {
                 Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} ", clientId) + ex.StackTrace, ex);
             }
 
+
+            try
+            {
+                String directoryId = GetParentId();
+            }
+            catch (Exception ex)
+            {
+
+                Logger.Error(String.Format("ConnectToGoogleDriveService creating Parent Id: {0} ", clientId) + ex.StackTrace, ex);
+            }
+
+        }
+        private string GetParentId()
+        {
+            var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", folderName);
+
+            var files = FileHelper.GetFiles(Service, query);
+            Logger.Trace("Files Count:" + files);
+            // If there isn't a directory with this name lets create one.
+            if (files.Count == 0)
+            {
+                files.Add(this.CreateDirectory(folderName));
+                Logger.Trace("If there isn't a directory with this name, lets create " + folderName);
+            }
+            if (files.Count != 0)
+            {
+                string directoryId = files[0].Id;
+
+                return directoryId;
+            }
+            else
+            {
+                Logger.Error("CANNOT create " + folderName);
+                return "-1";
+            }
         }
 
         /// <summary>
@@ -157,7 +169,14 @@ namespace GoogleDriveUploader
                 File updatedFile = request.ResponseBody;
 
 
-                return ConvertFileToGoogleDriveFile(updatedFile);
+                if (updatedFile == null)
+                {
+                    throw new Exception("InsertMediaUpload request.ResponseBody is null");
+                }
+                else
+                {
+                    return ConvertFileToGoogleDriveFile(file);
+                }
             }
             catch (Exception e)
             {
@@ -198,7 +217,7 @@ namespace GoogleDriveUploader
             }
             catch (System.IO.IOException e)
             {
-
+                Logger.Error("Google Service.Files.Delete An error occurred: " + e.Message, e);
             }
         }
 
@@ -224,7 +243,7 @@ namespace GoogleDriveUploader
                 }
                 catch (Exception e)
                 {
-                    Logger.Error("An error occurred: " + e.Message, e);
+                    Logger.Error("Google Service RetrieveAllFiles An error occurred: " + e.Message, e);
                     request.PageToken = null;
                 }
             } while (!String.IsNullOrEmpty(request.PageToken));
@@ -251,7 +270,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception e)
             {
-                Logger.Error("An error occurred: " + e.Message, e);
+                Logger.Error("Google TrashFile An error occurred: " + e.Message, e);
             }
             return null;
         }
@@ -274,9 +293,10 @@ namespace GoogleDriveUploader
             body.MimeType = mimeType;
 
             // Set the parent folder.
-            if (!String.IsNullOrEmpty(DirectoryId))
+            String directoryId = GetParentId();
+            if (!String.IsNullOrEmpty(directoryId))
             {
-                body.Parents = new List<ParentReference>() { new ParentReference() { Id = DirectoryId } };
+                body.Parents = new List<ParentReference>() { new ParentReference() { Id = directoryId } };
             }
 
             // File's content.
@@ -293,11 +313,18 @@ namespace GoogleDriveUploader
                 // Console.WriteLine("File ID: " + file.Id);
 
 
-                return ConvertFileToGoogleDriveFile(file);
+                if (file == null)
+                {
+                    throw new Exception("InsertMediaUpload request.ResponseBody is null");
+                }
+                else
+                {
+                    return ConvertFileToGoogleDriveFile(file);
+                }
             }
             catch (Exception e)
             {
-                Logger.Error("An error occurred: " + e.Message, e);
+                Logger.Error("GoogleDriveFile InsertFile An error occurred: " + e.Message, e);
                 return null;
             }
         }
@@ -309,6 +336,8 @@ namespace GoogleDriveUploader
 
             if (System.IO.File.Exists(uploadFile))
             {
+
+                String directoryId = GetParentId();
                 var body = new File
                 {
                     Title = System.IO.Path.GetFileName(uploadFile),
@@ -318,7 +347,7 @@ namespace GoogleDriveUploader
                               {
                                   new ParentReference()
                                   {
-                                      Id = DirectoryId
+                                      Id = directoryId
                                   }
                               }
                 };
@@ -331,17 +360,24 @@ namespace GoogleDriveUploader
                     FilesResource.UpdateMediaUpload request = Service.Files.Update(body, fileId, stream, GetMimeType(uploadFile));
                     request.Upload();
                     var file = request.ResponseBody;
-                    return ConvertFileToGoogleDriveFile(file);
+                    if (file == null)
+                    {
+                        throw new Exception("InsertMediaUpload request.ResponseBody is null");
+                    }
+                    else
+                    {
+                        return ConvertFileToGoogleDriveFile(file);
+                    }
                 }
                 catch (Exception e)
                 {
-                    Logger.Error("An error occurred: " + e.Message, e);
+                    Logger.Error(" GoogleDriveFile UpdateFile An error occurred: " + e.Message, e);
                     return null;
                 }
             }
             else
             {
-                Logger.Error("File does not exist: " + uploadFile);
+                Logger.Error(" GoogleDriveFile UpdateFile File does not exist: " + uploadFile);
                 return null;
             }
 
@@ -356,6 +392,8 @@ namespace GoogleDriveUploader
 
             if (System.IO.File.Exists(uploadFile))
             {
+
+                String directoryId = GetParentId();
                 var body = new File
                 {
                     Title = System.IO.Path.GetFileName(uploadFile),
@@ -365,7 +403,7 @@ namespace GoogleDriveUploader
                               {
                                   new ParentReference()
                                   {
-                                      Id = DirectoryId
+                                      Id = directoryId
                                   }
                               }
                 };
@@ -378,7 +416,14 @@ namespace GoogleDriveUploader
                     FilesResource.UpdateMediaUpload request = Service.Files.Update(body, fileId, stream, GetMimeType(uploadFile));
                     request.Upload();
                     var file = request.ResponseBody;
-                    return ConvertFileToGoogleDriveFile(file);
+                    if (file == null)
+                    {
+                        throw new Exception("InsertMediaUpload request.ResponseBody is null");
+                    }
+                    else
+                    {
+                        return ConvertFileToGoogleDriveFile(file);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -450,6 +495,9 @@ namespace GoogleDriveUploader
         {
             if (System.IO.File.Exists(uploadFile))
             {
+
+                String directoryId = GetParentId();
+
                 var body = new File
                            {
                                Title = System.IO.Path.GetFileName(uploadFile),
@@ -459,7 +507,7 @@ namespace GoogleDriveUploader
                                          {
                                              new ParentReference()
                                              {
-                                                 Id = DirectoryId
+                                                 Id = directoryId
                                              }
                                          }
                            };
@@ -474,7 +522,14 @@ namespace GoogleDriveUploader
                     FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                     request.Upload();
                     var file = request.ResponseBody;
-                    return ConvertFileToGoogleDriveFile(file);
+                    if (file == null)
+                    {
+                        throw new Exception("InsertMediaUpload request.ResponseBody is null");
+                    }
+                    else
+                    {
+                        return ConvertFileToGoogleDriveFile(file);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -495,7 +550,7 @@ namespace GoogleDriveUploader
             byte[] byteArray = null)
         {
 
-
+            String directoryId = GetParentId();
             var body = new File
             {
                 Title = System.IO.Path.GetFileName(uploadFile),
@@ -505,26 +560,39 @@ namespace GoogleDriveUploader
                                          {
                                              new ParentReference()
                                              {
-                                                 Id = DirectoryId
+                                                 Id = directoryId
                                              }
                                          }
             };
 
             //  byte[] byteArray = System.IO.File.ReadAllBytes(uploadFile);
             var stream = new System.IO.MemoryStream(byteArray);
+   
             try
             {
 
                 FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                 request.Upload();
                 var file = request.ResponseBody;
-                return ConvertFileToGoogleDriveFile(file);
+
+                if (file == null)
+                {
+                    throw new Exception("InsertMediaUpload request.ResponseBody is null");
+                }
+                else
+                {
+                    return ConvertFileToGoogleDriveFile(file);
+                }
             }
             catch (Exception e)
             {
                 Logger.Error("Service.Files.Insert error occurred: " + e.StackTrace, e);
                 return null;
             }
+            
+
+
+            
 
 
         }
