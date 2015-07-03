@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace GoogleDriveUploader
 {
@@ -15,7 +16,13 @@ namespace GoogleDriveUploader
         GoogleDriveFile UpdateFile(string uploadFile, string fileId);
         GoogleDriveFile UpdateFile(string uploadFile, string fileId, string description = "File updated by DriveUploader for Windows", byte[] byteArray = null);
         GoogleDriveFile UploadFile(string uploadFile, string description = "File uploaded by DriveUploader For Windows");
-        void ConnectToGoogleDriveServiceAsyn();
- 
+        void Connect(
+            String clientId,
+            String userEmail,
+            String serviceAccountEmail,
+            X509Certificate2 certificate,
+            String folderName,
+            String password);
+
     }
 }

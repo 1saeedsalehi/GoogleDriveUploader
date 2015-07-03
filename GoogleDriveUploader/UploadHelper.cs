@@ -21,36 +21,33 @@ namespace GoogleDriveUploader
 
         protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        private String clientId { set; get; }
-        private String userEmail { set; get; }
-        private String folderName { set; get; }
-        private String serviceAccountEmail { set; get; }
+        private String ClientId { set; get; }
+        private String UserEmail { set; get; }
+        private String FolderName { set; get; }
+        private String ServiceAccountEmail { set; get; }
         private X509Certificate2 Certificate { set; get; }
         //  private const string SERVICE_ACCOUNT_EMAIL = "660481316212-aietulh54ei2eqsi1gdvl0g7s12ohf70@developer.gserviceaccount.com";
         // private const string SERVICE_ACCOUNT_PKCS12_FILE_PATH = @"C:\Users\Yuce\Documents\GitHub\StoreManagement\StoreManagement\StoreManagement.Admin\Content\Google Drive File Upload-1cecdf432860.p12";
 
 
-        public UploadHelper(
-            String clientId,
-            String userEmail,
-            String serviceAccountEmail,
-           X509Certificate2 certificate,
-            String folderName,
-            String password)
+        
+        public void Connect(
+          String clientId,
+          String userEmail,
+          String serviceAccountEmail,
+         X509Certificate2 certificate,
+          String folderName,
+          String password)
         {
-            this.clientId = clientId;
-            this.userEmail = userEmail;
-            this.folderName = folderName;
-            this.serviceAccountEmail = serviceAccountEmail;
-            this.Certificate = certificate;
-            this.Password = password;
-            ConnectToGoogleDriveServiceAsyn();
+            ClientId = clientId;
+            UserEmail = userEmail;
+            FolderName = folderName;
+            ServiceAccountEmail = serviceAccountEmail;
+            Certificate = certificate;
+            Password = password;
+            ConnectToGoogleDriveService(UserEmail, FolderName);
         }
-        public void ConnectToGoogleDriveServiceAsyn()
-        {
-                       ConnectToGoogleDriveService(userEmail, folderName);
-        }
-
+        
 
         /// <summary>
         /// Build a Drive service object authorized with the service account
@@ -69,7 +66,7 @@ namespace GoogleDriveUploader
             //X509Certificate2 certificate = new X509Certificate2(privateKeyRawData,
             //    Password, X509KeyStorageFlags.Exportable);
             ServiceAccountCredential credential = new ServiceAccountCredential(
-                new ServiceAccountCredential.Initializer(serviceAccountEmail)
+                new ServiceAccountCredential.Initializer(ServiceAccountEmail)
                 {
                     Scopes = scopes,
                     User = userEmail
@@ -94,7 +91,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception ex)
             {
-                Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} ", clientId) + ex.StackTrace, ex);
+                Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} ", ClientId) + ex.StackTrace, ex);
             }
 
 
@@ -105,21 +102,21 @@ namespace GoogleDriveUploader
             catch (Exception ex)
             {
 
-                Logger.Error(String.Format("ConnectToGoogleDriveService creating Parent Id: {0} ", clientId) + ex.StackTrace, ex);
+                Logger.Error(String.Format("ConnectToGoogleDriveService creating Parent Id: {0} ", ClientId) + ex.StackTrace, ex);
             }
 
         }
         private string GetParentId()
         {
-            var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", folderName);
+            var query = string.Format("title = '{0}' and mimeType = 'application/vnd.google-apps.folder'", FolderName);
 
             var files = FileHelper.GetFiles(Service, query);
             Logger.Trace("Files Count:" + files);
             // If there isn't a directory with this name lets create one.
             if (files.Count == 0)
             {
-                files.Add(this.CreateDirectory(folderName));
-                Logger.Trace("If there isn't a directory with this name, lets create " + folderName);
+                files.Add(this.CreateDirectory(FolderName));
+                Logger.Trace("If there isn't a directory with this name, lets create " + FolderName);
             }
             if (files.Count != 0)
             {
@@ -129,7 +126,7 @@ namespace GoogleDriveUploader
             }
             else
             {
-                Logger.Error("CANNOT create " + folderName);
+                Logger.Error("CANNOT create " + FolderName);
                 return "-1";
             }
         }
