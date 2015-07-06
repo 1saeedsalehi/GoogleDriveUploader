@@ -435,6 +435,18 @@ namespace GoogleDriveUploader
             }
 
         }
+        /// <summary>
+        /// Share content. Doc link: https://developers.google.com/drive/v2/reference/permissions/insert
+        /// </summary>  
+        private static void Share(DriveService service, string fileId, string value, string type, string role, bool ? isWithLink = null)
+        {
+            var permission = new Permission { Value = value, Type = type, Role = role };
+            if (isWithLink.HasValue)
+            {
+                permission.WithLink = isWithLink;
+            }
+            service.Permissions.Insert(permission, fileId).Execute();
+        }
         private File CreateDirectory(String directoryTitle, String directoryDescription = "Backup of files")
         {
 
@@ -455,8 +467,15 @@ namespace GoogleDriveUploader
                        };
             try
             {
+              
+
                 var request = Service.Files.Insert(body);
                 newDirectory = request.Execute();
+
+
+                Share(Service, newDirectory.Id, "", "anyone", "reader");
+ 
+
             }
             catch (Exception e)
             {
@@ -543,7 +562,7 @@ namespace GoogleDriveUploader
         }
         public GoogleDriveFile InsertFile(
             string uploadFile,
-            String description = "File uploaded by DriveUploader For Windows",
+            String description = "Google Drive File for anyone",
             byte[] byteArray = null)
         {
 
@@ -562,15 +581,19 @@ namespace GoogleDriveUploader
                                          }
             };
 
-            //  byte[] byteArray = System.IO.File.ReadAllBytes(uploadFile);
+        
+          
+
             var stream = new System.IO.MemoryStream(byteArray);
    
+
             try
             {
 
                 FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                 request.Upload();
                 var file = request.ResponseBody;
+              
 
                 if (file == null)
                 {
@@ -578,6 +601,8 @@ namespace GoogleDriveUploader
                 }
                 else
                 {
+
+                    Share(Service, file.Id, "me", "anyone", "reader");
                     return ConvertFileToGoogleDriveFile(file);
                 }
             }
