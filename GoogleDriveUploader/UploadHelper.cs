@@ -58,28 +58,31 @@ namespace GoogleDriveUploader
         public DriveService BuildService(String userEmail)
         {
 
-            var scopes = new[]
-                {
-                    DriveService.Scope.Drive,
-                    DriveService.Scope.DriveFile
-                };
-            //X509Certificate2 certificate = new X509Certificate2(privateKeyRawData,
-            //    Password, X509KeyStorageFlags.Exportable);
-            ServiceAccountCredential credential = new ServiceAccountCredential(
-                new ServiceAccountCredential.Initializer(ServiceAccountEmail)
-                {
-                    Scopes = scopes,
-                    User = userEmail
-                }.FromCertificate(Certificate));
+            //var scopes = new[]
+            //    {
+            //        DriveService.Scope.Drive,
+            //        DriveService.Scope.DriveFile
+            //    };
+            ////X509Certificate2 certificate = new X509Certificate2(privateKeyRawData,
+            ////    Password, X509KeyStorageFlags.Exportable);
+            //ServiceAccountCredential credential = new ServiceAccountCredential(
+            //    new ServiceAccountCredential.Initializer(ServiceAccountEmail)
+            //    {
+            //        Scopes = scopes,
+            //        User = userEmail
+            //    }.FromCertificate(Certificate));
 
-            // Create the service.
-            var service = new DriveService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = "Drive API Service Account Sample",
-            });
+            //// Create the service.
+            //var service = new DriveService(new BaseClientService.Initializer()
+            //{
+            //    HttpClientInitializer = credential,
+            ////    ApplicationName = "Drive API Service Account Sample",
+            //    ApplicationName = "StoreManagement"
+            //});
 
-            return service;
+            //return service;
+
+            return Authentication.AuthenticateServiceAccount(ServiceAccountEmail, this.Certificate);
         }
         private void ConnectToGoogleDriveService(String userEmail, string folderName)
         {
