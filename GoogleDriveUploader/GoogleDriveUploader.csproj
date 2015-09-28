@@ -100,7 +100,6 @@
     <Compile Include="GetFiles.cs" />
     <Compile Include="GoogleDriveFile.cs" />
     <Compile Include="IUploadHelper.cs" />
-    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UploadHelper.cs" />
   </ItemGroup>

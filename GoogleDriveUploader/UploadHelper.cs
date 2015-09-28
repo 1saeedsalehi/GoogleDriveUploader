@@ -30,7 +30,7 @@ namespace GoogleDriveUploader
         // private const string SERVICE_ACCOUNT_PKCS12_FILE_PATH = @"C:\Users\Yuce\Documents\GitHub\StoreManagement\StoreManagement\StoreManagement.Admin\Content\Google Drive File Upload-1cecdf432860.p12";
 
 
-        
+
         public void Connect(
           String clientId,
           String userEmail,
@@ -47,7 +47,7 @@ namespace GoogleDriveUploader
             Password = password;
             ConnectToGoogleDriveService(UserEmail, FolderName);
         }
-        
+
 
         /// <summary>
         /// Build a Drive service object authorized with the service account
@@ -94,7 +94,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception ex)
             {
-                Logger.Error(String.Format("ConnectToGoogleDriveService error occurred: client id: {0} ", ClientId) + ex.StackTrace, ex);
+                Logger.Error(ex, String.Format("ConnectToGoogleDriveService error occurred: client id: {0} ", ClientId) + ex.StackTrace, userEmail, folderName);
             }
 
 
@@ -105,7 +105,7 @@ namespace GoogleDriveUploader
             catch (Exception ex)
             {
 
-                Logger.Error(String.Format("ConnectToGoogleDriveService creating Parent Id: {0} ", ClientId) + ex.StackTrace, ex);
+                Logger.Error(ex, String.Format("ConnectToGoogleDriveService creating Parent Id: {0} ", ClientId) + ex.StackTrace, userEmail, folderName);
             }
 
         }
@@ -180,7 +180,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception e)
             {
-                Logger.Error("An error occurred: " + e.Message, e);
+                Logger.Error(e, "An error occurred: " + e.StackTrace, fileId, newDescription, newFilename, newMimeType, newTitle);
                 return null;
             }
         }
@@ -196,7 +196,7 @@ namespace GoogleDriveUploader
             gdf.IconLink = file.IconLink;
             gdf.CreatedDate = file.CreatedDate;
             gdf.WebContentLink = file.WebContentLink;
-            gdf.Height =  file.ImageMediaMetadata.Height;
+            gdf.Height = file.ImageMediaMetadata.Height;
             gdf.Width = file.ImageMediaMetadata.Width;
 
 
@@ -217,7 +217,7 @@ namespace GoogleDriveUploader
             }
             catch (System.IO.IOException e)
             {
-                Logger.Error("Google Service.Files.Delete An error occurred: " + e.Message, e);
+                Logger.Error(e, "Google Service.Files.Delete An error occurred: " + e.StackTrace, fileId);
             }
         }
 
@@ -243,7 +243,7 @@ namespace GoogleDriveUploader
                 }
                 catch (Exception e)
                 {
-                    Logger.Error("Google Service RetrieveAllFiles An error occurred: " + e.Message, e);
+                    Logger.Error(e,"Google Service RetrieveAllFiles An error occurred: " + e.StackTrace);
                     request.PageToken = null;
                 }
             } while (!String.IsNullOrEmpty(request.PageToken));
@@ -270,7 +270,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception e)
             {
-                Logger.Error("Google TrashFile An error occurred: " + e.Message, e);
+                Logger.Error(e, "Google TrashFile An error occurred: " + e.StackTrace, fileId);
             }
             return null;
         }
@@ -324,7 +324,7 @@ namespace GoogleDriveUploader
             }
             catch (Exception e)
             {
-                Logger.Error("GoogleDriveFile InsertFile An error occurred: " + e.Message, e);
+                Logger.Error(e, "GoogleDriveFile InsertFile An error occurred: " + e.StackTrace, title, description, mimeType, filename);
                 return null;
             }
         }
@@ -441,7 +441,7 @@ namespace GoogleDriveUploader
         /// <summary>
         /// Share content. Doc link: https://developers.google.com/drive/v2/reference/permissions/insert
         /// </summary>  
-        private static void Share(DriveService service, string fileId, string value, string type, string role, bool ? isWithLink = null)
+        private static void Share(DriveService service, string fileId, string value, string type, string role, bool? isWithLink = null)
         {
             var permission = new Permission { Value = value, Type = type, Role = role };
             if (isWithLink.HasValue)
@@ -470,14 +470,14 @@ namespace GoogleDriveUploader
                        };
             try
             {
-              
+
 
                 var request = Service.Files.Insert(body);
                 newDirectory = request.Execute();
 
 
                 Share(Service, newDirectory.Id, "", "anyone", "reader");
- 
+
 
             }
             catch (Exception e)
@@ -537,7 +537,7 @@ namespace GoogleDriveUploader
                 {
                     //body.UserPermission.WithLink = true;
                     //body.UserPermission.Type = "anyone";
-                   
+
                     FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                     request.Upload();
                     var file = request.ResponseBody;
@@ -584,11 +584,11 @@ namespace GoogleDriveUploader
                                          }
             };
 
-        
-          
+
+
 
             var stream = new System.IO.MemoryStream(byteArray);
-   
+
 
             try
             {
@@ -596,7 +596,7 @@ namespace GoogleDriveUploader
                 FilesResource.InsertMediaUpload request = Service.Files.Insert(body, stream, GetMimeType(uploadFile));
                 request.Upload();
                 var file = request.ResponseBody;
-              
+
 
                 if (file == null)
                 {
@@ -614,10 +614,10 @@ namespace GoogleDriveUploader
                 Logger.Error("Service.Files.Insert error occurred: " + e.StackTrace, e);
                 return null;
             }
-            
 
 
-            
+
+
 
 
         }
